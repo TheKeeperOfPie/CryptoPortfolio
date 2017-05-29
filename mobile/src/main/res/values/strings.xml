@@ -1,0 +1,26 @@
+<resources>
+    <string name="app_name">CryptoPortfolio</string>
+    <string name="title_activity_main">CryptoPortfolio</string>
+
+    <string name="change_percent_positive">▲%1$s%%</string>
+    <string name="change_percent_negative">▼%1$s%%</string>
+    <string name="change_percent_none">0%%</string>
+    <string name="change_amount_positive">▲%1$s</string>
+    <string name="change_amount_negative">▼%1$s</string>
+    <string name="change_amount_none">%1$s</string>
+    <string name="change_positive">▲%1$s (%2$s%%)</string>
+    <string name="change_negative">▼%1$s (%2$s%%)</string>
+    <string name="change_none">%2$s</string>
+
+    <string name="sort">Sort</string>
+    <string name="sort_price">Price</string>
+    <string name="sort_market_cap">Market Cap</string>
+    <string name="sort_day_volume">Day Volume</string>
+    <string name="sort_change_hour">% Change Hour</string>
+    <string name="sort_change_day">% Change Day</string>
+    <string name="sort_change_week">% Change Week</string>
+    <string name="sort_symbol">Symbol</string>
+    <string name="sort_name">Name</string>
+    <string name="currency">Currency</string>
+
+</resources>

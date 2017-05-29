@@ -1,0 +1,132 @@
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+
+android {
+    compileSdkVersion "android-O"
+    buildToolsVersion "26.0.0-rc2"
+
+    aaptOptions {
+        cruncherEnabled false
+    }
+
+    defaultConfig {
+        applicationId "com.winsonchiu.cryptoportfolio"
+        minSdkVersion 25
+        targetSdkVersion 25
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        multiDexEnabled true
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+        }
+
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    dexOptions {
+        preDexLibraries true
+        maxProcessCount 8
+    }
+
+    packagingOptions {
+        exclude "META-INF/LICENSE"
+    }
+
+    sourceSets {
+        main.java.srcDirs = ['src/main/kotlin']
+    }
+
+    flavorDimensions "unspecified"
+
+    productFlavors {
+        dev {
+            resConfigs "en", "xxxhdpi"
+        }
+
+        prod {
+            resConfigs "en"
+        }
+    }
+}
+
+kapt {
+    generateStubs = true
+}
+
+// Versions
+ext {
+    versionArchitectureComponents = "1.0.0-alpha1"
+    versionButterKnife = "8.6.0"
+    versionDagger = "2.11-rc2"
+    versionXchange = "4.2.0"
+    versionSupportLibrary = "26.0.0-beta1"
+    versionRxLifecycle = "2.1.0"
+}
+
+// App dependencies
+dependencies {
+    wearApp project(":wear")
+
+    implementation fileTree(dir: "libs", include: ["*.jar"])
+
+    implementation project(":api")
+
+    kapt "android.arch.persistence.room:compiler:$versionArchitectureComponents"
+
+    implementation "android.arch.persistence.room:runtime:$versionArchitectureComponents"
+    implementation "android.arch.persistence.room:rxjava2:$versionArchitectureComponents"
+
+    implementation "android.arch.lifecycle:runtime:$versionArchitectureComponents"
+    implementation "android.arch.lifecycle:extensions:$versionArchitectureComponents"
+    kapt "android.arch.lifecycle:compiler:$versionArchitectureComponents"
+
+    implementation "com.google.android.gms:play-services-wearable:10.2.6"
+
+    implementation "com.google.dagger:dagger:$versionDagger"
+    implementation "com.google.dagger:dagger-android:$versionDagger"
+    implementation "com.google.dagger:dagger-android-support:$versionDagger"
+    kapt "com.google.dagger:dagger-compiler:$versionDagger"
+    kapt "com.google.dagger:dagger-android-processor:$versionDagger"
+    compileOnly 'org.glassfish:javax.annotation:10.0-b28'
+
+    implementation "com.android.support:appcompat-v7:$versionSupportLibrary"
+    implementation "com.android.support:design:$versionSupportLibrary"
+    implementation "com.android.support:appcompat-v7:$versionSupportLibrary"
+    implementation "com.android.support:cardview-v7:$versionSupportLibrary"
+    implementation "com.android.support:recyclerview-v7:$versionSupportLibrary"
+    implementation "com.android.support.constraint:constraint-layout:1.0.2"
+
+    implementation "org.knowm.xchange:xchange-core:$versionXchange"
+    implementation "org.knowm.xchange:xchange-coinbase:$versionXchange"
+    implementation "org.knowm.xchange:xchange-gdax:$versionXchange"
+
+    implementation "io.reactivex.rxjava2:rxandroid:2.0.1"
+    implementation "io.reactivex.rxjava2:rxjava:2.1.0"
+    implementation "io.reactivex.rxjava2:rxkotlin:2.0.3"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
+
+    implementation "com.jakewharton:butterknife:$versionButterKnife"
+    kapt "com.jakewharton:butterknife-compiler:$versionButterKnife"
+
+    implementation "com.trello.rxlifecycle2:rxlifecycle:$versionRxLifecycle"
+    implementation "com.trello.rxlifecycle2:rxlifecycle-android:$versionRxLifecycle"
+    implementation "com.trello.rxlifecycle2:rxlifecycle-components:$versionRxLifecycle"
+    implementation "com.trello.rxlifecycle2:rxlifecycle-android-lifecycle:$versionRxLifecycle"
+    implementation "com.trello.rxlifecycle2:rxlifecycle-kotlin:$versionRxLifecycle"
+    implementation "com.trello.rxlifecycle2:rxlifecycle-android-lifecycle-kotlin:$versionRxLifecycle"
+}
+
+// Test dependencies
+dependencies {
+    testImplementation "junit:junit:4.12"
+    androidTestImplementation("com.android.support.test.espresso:espresso-core:2.2.2", {
+        exclude group: "com.android.support", module: "support-annotations"
+    })
+}

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    >
+
+    <item
+        android:id="@+id/menu_item_sort"
+        android:title="@string/sort"
+        android:icon="@drawable/ic_sort_black_24dp"
+        app:showAsAction="ifRoom"
+        >
+
+        <menu>
+
+            <item
+                android:id="@+id/menu_item_price"
+                android:title="@string/sort_price"
+                android:orderInCategory="100"
+                />
+
+            <item
+                android:id="@+id/menu_item_market_cap"
+                android:title="@string/sort_market_cap"
+                android:orderInCategory="200"
+                />
+
+            <item
+                android:id="@+id/menu_item_day_volume"
+                android:title="@string/sort_day_volume"
+                android:orderInCategory="300"
+                />
+
+            <item
+                android:id="@+id/menu_item_change_hour"
+                android:title="@string/sort_change_hour"
+                android:orderInCategory="400"
+                />
+
+            <item
+                android:id="@+id/menu_item_change_day"
+                android:title="@string/sort_change_day"
+                android:orderInCategory="500"
+                />
+
+            <item
+                android:id="@+id/menu_item_change_week"
+                android:title="@string/sort_change_week"
+                android:orderInCategory="600"
+                />
+
+            <item
+                android:id="@+id/menu_item_symbol"
+                android:title="@string/sort_symbol"
+                android:orderInCategory="700"
+                />
+
+            <item
+                android:id="@+id/menu_item_name"
+                android:title="@string/sort_name"
+                android:orderInCategory="800"
+                />
+
+        </menu>
+
+    </item>
+
+    <item
+        android:id="@+id/menu_item_currency"
+        android:title="@string/currency"
+        android:icon="@drawable/ic_attach_money_black_24dp"
+        app:showAsAction="ifRoom"
+        >
+
+        <!-- Filled programmatically -->
+        <menu/>
+
+    </item>
+
+</menu>
