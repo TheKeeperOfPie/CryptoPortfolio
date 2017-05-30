@@ -13,6 +13,10 @@ import retrofit2.http.Query
 
 interface CoinMarketCapApiService {
 
+    companion object {
+        const val BASE_URL = "https://api.coinmarketcap.com/v1/"
+    }
+
     @GET("ticker")
     fun ticker(
             @Query("limit") limit: Int?,

@@ -6,10 +6,8 @@ import com.winsonchiu.crypto.api.coinmarketcap.data.Currency
 import com.winsonchiu.crypto.api.coinmarketcap.data.Ticker
 import com.winsonchiu.crypto.api.shared.DataHolder
 import com.winsonchiu.crypto.api.shared.RequestState
+import com.winsonchiu.crypto.api.shared.rateLimit
 import io.reactivex.Observable
-import io.reactivex.ObservableTransformer
-import io.reactivex.Single
-import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
 import java.util.concurrent.TimeUnit
 
@@ -37,11 +35,11 @@ class CoinMarketCap(val dataStore: CoinMarketCapDataStore) {
 
     val dataHolder: DataHolder<List<Ticker>, RequestState, CoinMarketCapError>
 
+    private val api = CoinMarketCapApi()
+
     private val relayContent = BehaviorRelay.create<List<Ticker>>()
     private val relayState = BehaviorRelay.createDefault<RequestState>(RequestState.NONE)
     private val relayErrors = PublishRelay.create<CoinMarketCapError>()
-
-    private val api = CoinMarketCapApi()
     private val requestTickers = BehaviorRelay.create<String>()
 
     init {
@@ -53,8 +51,9 @@ class CoinMarketCap(val dataStore: CoinMarketCapDataStore) {
         dataHolder = DataHolder(content, relayState, relayErrors)
 
         requestTickers
+                .observeOn(Schedulers.io())
                 .doOnNext { _ -> relayState.accept(RequestState.LOADING) }
-                .compose(rateLimit(10, TimeUnit.SECONDS))
+                .rateLimit(10, TimeUnit.SECONDS)
                 .switchMap({
                     api.ticker(limit, currency)
                             .map {
@@ -88,30 +87,6 @@ class CoinMarketCap(val dataStore: CoinMarketCapDataStore) {
 
     fun refreshTicker(id: String) {
         requestTickers.accept(id)
-    }
-
-    fun <T> rateLimit(window: Long, unit: TimeUnit): ObservableTransformer<T, T> {
-        val relay = PublishRelay.create<T>()
-        val disposable = CompositeDisposable()
-        var lastRequestTime = 0L
-
-        return ObservableTransformer {
-            observable ->
-            observable.flatMap {
-                val result: Observable<T>
-
-                if (lastRequestTime < System.currentTimeMillis() - unit.toMillis(window)) {
-                    result = Observable.just(it)
-                } else {
-                    result = relay
-                    disposable.clear()
-                    disposable.add(Single.just(it).delay(lastRequestTime + unit.toMillis(window) - System.currentTimeMillis(), TimeUnit.MILLISECONDS).subscribe(relay))
-                }
-
-                lastRequestTime = System.currentTimeMillis()
-                result
-            }
-        }
     }
 }
 

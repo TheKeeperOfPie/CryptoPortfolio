@@ -1,4 +1,4 @@
-package com.winsonchiu.cryptoportfolio.home
+package com.winsonchiu.cryptoportfolio.home.overview
 
 import com.winsonchiu.crypto.api.coinmarketcap.data.Ticker
 import java.math.BigDecimal
