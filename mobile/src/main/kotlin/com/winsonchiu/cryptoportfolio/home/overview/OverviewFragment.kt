@@ -3,7 +3,6 @@ package com.winsonchiu.cryptoportfolio.home.overview
 import android.os.Bundle
 import android.support.v4.content.ContextCompat
 import android.support.v4.widget.SwipeRefreshLayout
-import android.support.v7.util.DiffUtil
 import android.support.v7.widget.DividerItemDecoration
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.OrientationHelper
@@ -18,8 +17,8 @@ import butterknife.BindView
 import butterknife.ButterKnife
 import com.jakewharton.rxrelay2.PublishRelay
 import com.winsonchiu.crypto.api.coinmarketcap.CoinMarketCap
-import com.winsonchiu.crypto.api.coinmarketcap.CoinMarketCapDataStoreMemory
 import com.winsonchiu.crypto.api.coinmarketcap.data.Currency
+import com.winsonchiu.crypto.api.coinmarketcap.data.GlobalData
 import com.winsonchiu.crypto.api.coinmarketcap.data.Ticker
 import com.winsonchiu.crypto.api.shared.RequestState
 import com.winsonchiu.cryptoportfolio.R
@@ -27,9 +26,8 @@ import com.winsonchiu.cryptoportfolio.framework.android.BaseFragment
 import com.winsonchiu.cryptoportfolio.framework.android.ViewUtils
 import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.functions.BiFunction
 import io.reactivex.schedulers.Schedulers
-import java.math.BigDecimal
-import java.math.MathContext
 
 /**
  * Created by TheKeeperOfPie on 5/30/2017.
@@ -42,8 +40,8 @@ class OverviewFragment : BaseFragment() {
 
     private val currencyMenuMap = LinkedHashMap<Int, Currency>()
 
-    private val coinMarketCap = CoinMarketCap(CoinMarketCapDataStoreMemory(null))
-    private val tickersAdapter = TickersAdapter()
+    private val coinMarketCap = CoinMarketCap()
+    private val overviewController = OverviewController()
 
     private var tickersSort: TickersSort = TickersSort.MARKET_CAP
     private var sortAscending = false
@@ -74,11 +72,14 @@ class OverviewFragment : BaseFragment() {
         dividerItemDecoration.setDrawable(ContextCompat.getDrawable(context, R.drawable.divider_vertical))
 
         recyclerTickers.addItemDecoration(dividerItemDecoration)
-        recyclerTickers.adapter = tickersAdapter
+        recyclerTickers.adapter = overviewController.adapter
         recyclerTickers.layoutManager = LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
 
         layoutSwipeRefresh.setDistanceToTriggerSync(ViewUtils.dpToPixels(context, 120f).toInt())
-        layoutSwipeRefresh.setOnRefreshListener { coinMarketCap.refreshTickers() }
+        layoutSwipeRefresh.setOnRefreshListener {
+            coinMarketCap.refreshGlobalData()
+            coinMarketCap.refreshTickers()
+        }
 
         return view
     }
@@ -104,7 +105,9 @@ class OverviewFragment : BaseFragment() {
                 sortAscending = if (tickersSort == sort) !sortAscending else sort.defaultSortAscending
                 this.tickersSort = sort
 
-                coinMarketCap.dataHolder.content
+                coinMarketCap.tickersRequest
+                        .dataHolder
+                        .content
                         .firstElement()
                         .observeOn(AndroidSchedulers.mainThread())
                         .compose(lifecycleProvider.bindToLifecycle())
@@ -144,67 +147,29 @@ class OverviewFragment : BaseFragment() {
         return newTickers
     }
 
-    private fun diffTickers(oldTickers:List<TickerViewModel>, newTickers: List<TickerViewModel>): DiffUtil.DiffResult {
-        return DiffUtil.calculateDiff(object : DiffUtil.Callback() {
-
-            override fun getOldListSize(): Int = oldTickers.size
-
-            override fun getNewListSize(): Int = newTickers.size
-
-            override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-                return oldTickers[oldItemPosition].ticker.id == newTickers[newItemPosition].ticker.id
-            }
-
-            override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-                return oldTickers[oldItemPosition] == newTickers[newItemPosition]
-            }
-        })
-    }
-
-    fun Ticker.toViewModel(): TickerViewModel {
-        val displayValue = when (tickersSort) {
-            TickersSort.PRICE -> price
-            TickersSort.MARKET_CAP -> price // TODO
-            TickersSort.DAY_VOLUME -> dayVolume
-            TickersSort.CHANGE_HOUR -> percentChangeHour
-            TickersSort.CHANGE_DAY -> percentChangeDay
-            TickersSort.CHANGE_WEEK -> percentChangeWeek
-            else -> price
-        }.round(MathContext(5))
-
-        val percentChange = when (tickersSort) {
-            TickersSort.CHANGE_HOUR -> percentChangeHour
-            TickersSort.CHANGE_DAY -> percentChangeDay
-            TickersSort.CHANGE_WEEK -> percentChangeWeek
-            else -> percentChangeDay
-        }
-
-        val percentage = BigDecimal(100L) - percentChange
-        val originalValue = price * BigDecimal(100L) / percentage
-        val amountChange = (originalValue - price).round(MathContext(5))
-
-        return TickerViewModel(symbol, displayValue, amountChange, percentChange, this)
-    }
-
     override fun onResume() {
         super.onResume()
 
-        val dataHolder = coinMarketCap.dataHolder
+        val globalDataDataHolder = coinMarketCap.globalDataRequest.dataHolder
 
-        Observable.merge(dataHolder.content, relayContent)
+        val tickersDataHolder = coinMarketCap.tickersRequest.dataHolder
+
+        val tickersContent = Observable.merge(tickersDataHolder.content, relayContent)
                 .observeOn(Schedulers.computation())
-                .map { sortTickers(it).map { it.toViewModel() } }
-                .map { Pair<List<TickerViewModel>, DiffUtil.DiffResult>(it, diffTickers(tickersAdapter.tickers, it)) }
+                .map { sortTickers(it).map { it.toViewModel(tickersSort) } }
+
+        Observable.combineLatest(globalDataDataHolder.content, tickersContent, BiFunction { first: GlobalData, second: List<TickerViewModel> -> Pair(first, second) })
                 .observeOn(AndroidSchedulers.mainThread())
                 .compose(lifecycleProvider.bindToLifecycle())
-                .subscribe({ tickersAdapter.setData(it.first, it.second, coinMarketCap.currency) }, { it.printStackTrace() })
+                .subscribe({ overviewController.setData(it.first, it.second, coinMarketCap.currency) }, { it.printStackTrace() })
 
-        dataHolder.state
-                .map { it == RequestState.LOADING }
+        Observable.combineLatest(globalDataDataHolder.state, tickersDataHolder.state, BiFunction { first: RequestState, second: RequestState -> Pair(first, second) })
+                .map { it.first == RequestState.LOADING || it.second == RequestState.LOADING }
                 .observeOn(AndroidSchedulers.mainThread())
                 .compose(lifecycleProvider.bindToLifecycle())
                 .subscribe({ layoutSwipeRefresh.isRefreshing = it })
 
+        coinMarketCap.refreshGlobalData()
         coinMarketCap.refreshTickers()
     }
 

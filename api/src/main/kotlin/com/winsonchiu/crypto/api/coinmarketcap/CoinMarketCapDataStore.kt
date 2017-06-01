@@ -8,9 +8,7 @@ import com.winsonchiu.crypto.api.coinmarketcap.data.Ticker
  */
 interface CoinMarketCapDataStore {
 
-    var globalData: GlobalData?
-
-    fun updateTicker(ticker: Ticker)
+    fun storeTicker(ticker: Ticker)
 
     fun readTicker(id: String?): Ticker?
 
@@ -19,4 +17,8 @@ interface CoinMarketCapDataStore {
     fun readTickers(): List<Ticker>
 
     fun clearTickers()
+
+    fun storeGlobalData(globalData: GlobalData)
+
+    fun readGlobalData() : GlobalData?
 }

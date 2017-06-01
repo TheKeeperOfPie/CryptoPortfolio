@@ -31,7 +31,7 @@ android {
     }
 
     dexOptions {
-        preDexLibraries true
+        preDexLibraries false
         maxProcessCount 8
     }
 
@@ -65,6 +65,7 @@ ext {
     versionArchitectureComponents = "1.0.0-alpha1"
     versionButterKnife = "8.6.0"
     versionDagger = "2.11-rc2"
+    versionEpoxy = "2.1.0"
     versionXchange = "4.2.0"
     versionSupportLibrary = "26.0.0-beta1"
     versionRxLifecycle = "2.1.0"
@@ -77,6 +78,9 @@ dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
 
     implementation project(":api")
+
+    compile "com.airbnb.android:epoxy:$versionEpoxy"
+//    kapt "com.airbnb.android:epoxy-processor:$versionEpoxy"
 
     kapt "android.arch.persistence.room:compiler:$versionArchitectureComponents"
 
@@ -92,6 +96,7 @@ dependencies {
     implementation "com.google.dagger:dagger:$versionDagger"
     implementation "com.google.dagger:dagger-android:$versionDagger"
     implementation "com.google.dagger:dagger-android-support:$versionDagger"
+//    implementation "com.google.dagger:dagger-producers:$versionDagger"
     kapt "com.google.dagger:dagger-compiler:$versionDagger"
     kapt "com.google.dagger:dagger-android-processor:$versionDagger"
     compileOnly 'org.glassfish:javax.annotation:10.0-b28'

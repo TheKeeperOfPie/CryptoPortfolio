@@ -5,6 +5,8 @@
     <string name="name_overview">Overview</string>
     <string name="name_portfolio">Portfolio</string>
 
+    <string name="global_market_cap_format">Global Market Cap: %1$s</string>
+
     <string name="change_percent_positive">▲%1$s%%</string>
     <string name="change_percent_negative">▼%1$s%%</string>
     <string name="change_percent_none">0%%</string>

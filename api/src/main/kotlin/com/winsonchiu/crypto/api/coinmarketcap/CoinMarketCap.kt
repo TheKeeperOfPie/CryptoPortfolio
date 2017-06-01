@@ -1,21 +1,20 @@
 package com.winsonchiu.crypto.api.coinmarketcap
 
-import com.jakewharton.rxrelay2.BehaviorRelay
-import com.jakewharton.rxrelay2.PublishRelay
 import com.winsonchiu.crypto.api.coinmarketcap.data.Currency
+import com.winsonchiu.crypto.api.coinmarketcap.data.GlobalData
 import com.winsonchiu.crypto.api.coinmarketcap.data.Ticker
-import com.winsonchiu.crypto.api.shared.DataHolder
-import com.winsonchiu.crypto.api.shared.RequestState
-import com.winsonchiu.crypto.api.shared.rateLimit
-import io.reactivex.Observable
+import com.winsonchiu.crypto.api.shared.Request
+import io.reactivex.Maybe
+import io.reactivex.Single
+import io.reactivex.functions.Function
 import io.reactivex.schedulers.Schedulers
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.Callable
 
 /**
  * Created by TheKeeperOfPie on 5/28/2017.
  */
 
-class CoinMarketCap(val dataStore: CoinMarketCapDataStore) {
+class CoinMarketCap(val dataStore: CoinMarketCapDataStore = CoinMarketCapDataStoreMemory()) {
 
     var limit: Int? = null
         set (limit) {
@@ -33,60 +32,52 @@ class CoinMarketCap(val dataStore: CoinMarketCapDataStore) {
             }
         }
 
-    val dataHolder: DataHolder<List<Ticker>, RequestState, CoinMarketCapError>
-
     private val api = CoinMarketCapApi()
 
-    private val relayContent = BehaviorRelay.create<List<Ticker>>()
-    private val relayState = BehaviorRelay.createDefault<RequestState>(RequestState.NONE)
-    private val relayErrors = PublishRelay.create<CoinMarketCapError>()
-    private val requestTickers = BehaviorRelay.create<String>()
+    val tickersRequest: Request<String, List<Ticker>, CoinMarketCapError>
+
+    val globalDataRequest: Request<Unit, GlobalData, CoinMarketCapError>
 
     init {
-        val content: Observable<List<Ticker>> = relayContent
-                .observeOn(Schedulers.io())
-                .doOnSubscribe { reloadIfNone() }
-                .observeOn(Schedulers.trampoline())
+        tickersRequest = Request(Callable {
+            Maybe.fromCallable({ dataStore.readTickers() })
+                    .subscribeOn(Schedulers.io())
+                    .filter { !it.isEmpty() }
+        }, Callable {
+            ""
+        }, Function<String, Single<List<Ticker>>> {
+            api.ticker(limit, currency)
+                    .map {
+                        dataStore.storeTickers(it)
+                        dataStore.readTickers()
+                    }
+        }, Function<Throwable, CoinMarketCapError> {
+            CoinMarketCapError.UNKNOWN
+        })
 
-        dataHolder = DataHolder(content, relayState, relayErrors)
-
-        requestTickers
-                .observeOn(Schedulers.io())
-                .doOnNext { _ -> relayState.accept(RequestState.LOADING) }
-                .rateLimit(10, TimeUnit.SECONDS)
-                .switchMap({
-                    api.ticker(limit, currency)
-                            .map {
-                                dataStore.storeTickers(it)
-                                dataStore.readTickers()
-                            }
-                            .doOnSuccess(relayContent)
-                            .doOnError { _ -> relayErrors.accept(CoinMarketCapError.UNKNOWN) }
-                            .doFinally { relayState.accept(RequestState.COMPLETE) }
-                            .doOnError { it.printStackTrace() }
-                            .toObservable()
-                            .onErrorResumeNext(Observable.empty())
-                })
-                .subscribe()
-    }
-
-    private fun reloadIfNone() {
-        if (relayContent.value?.isEmpty() != false && relayState.value != RequestState.LOADING) {
-            val tickers = dataStore.readTickers()
-            if (tickers.isEmpty()) {
-                refreshTickers()
-            } else {
-                relayContent.accept(tickers)
+        globalDataRequest = Request(Callable {
+            Maybe.fromCallable<GlobalData> {
+                dataStore.readGlobalData() ?: throw IllegalStateException()
             }
-        }
+                    .onErrorResumeNext(Maybe.empty<GlobalData>())
+                    .subscribeOn(Schedulers.io())
+        }, Callable<Unit> { }, Function<Unit, Single<GlobalData>> {
+            api.globalData(currency)
+                    .map {
+                        dataStore.storeGlobalData(it)
+                        dataStore.readGlobalData()
+                    }
+        }, Function<Throwable, CoinMarketCapError> {
+            CoinMarketCapError.UNKNOWN
+        })
     }
 
     fun refreshTickers() {
-        requestTickers.accept("")
+        tickersRequest.refresh("")
     }
 
-    fun refreshTicker(id: String) {
-        requestTickers.accept(id)
+    fun refreshGlobalData() {
+        globalDataRequest.refresh(Unit)
     }
 }
 
